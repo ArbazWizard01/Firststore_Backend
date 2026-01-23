@@ -1,7 +1,8 @@
 const Address = require("../models/Address");
 const User = require("../models/User");
+const generateToken = require("../utils/generateToken");
 
-// Temporary OTP store (Later replace with Redis / DB)
+// Temporary OTP store
 const otpStore = {};
 
 exports.sendOTP = async (req, res) => {
@@ -14,10 +15,8 @@ exports.sendOTP = async (req, res) => {
       });
     }
 
-    // Generate 6 digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000);
 
-    // Store OTP temporarily
     otpStore[phone] = otp;
 
     console.log("OTP (Dev Only):", otp);
@@ -52,7 +51,6 @@ exports.verifyOTP = async (req, res) => {
       });
     }
 
-    // Check if user already exists
     let user = await User.findOne({ phone });
 
     if (!user) {
@@ -93,7 +91,7 @@ exports.setUserDetails = async (req, res) => {
       });
     }
 
-    if (!firstName || !lastName || !profilePicture) {
+    if (!firstName || !lastName || !gender) {
       return res.status(400).json({ message: "Fields are required" });
     }
 
@@ -139,5 +137,72 @@ exports.setAddress = async (req, res) => {
       message: "Server error",
       error: error.message,
     });
+  }
+};
+
+//Login API
+
+exports.sendLoginOtp = async (req, res) => {
+  try {
+    const { phone } = req.body;
+    if (!phone) {
+      return res.status(400).json({ message: "Phone number is required" });
+    }
+
+    const user = await User.findOne({ phone });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const otp = Math.floor(100000 + Math.random() * 900000);
+
+    otpStore[phone] = otp;
+
+    console.log("Login OTP (Dev Only):", otp);
+
+    res.status(200).json({ status: 1, message: "Login OTP sent successfully" });
+  } catch (err) {
+    res.status(500).json({ message: "server error", error: err.message });
+  }
+};
+
+exports.verifyLoginOtp = async (req, res) => {
+  try {
+    const { phone, otp } = req.body;
+
+    if (!phone || !otp) {
+      return res.status(400).json({ message: "Phone and OTP required" });
+    }
+
+    if (otpStore[phone] != otp) {
+      return res.status(400).json({ message: "Invalid OTP" });
+    }
+
+    const user = await User.findOne({ phone });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Generate JWT token
+    const token = generateToken(user._id);
+
+    // Clear OTP
+    delete otpStore[phone];
+
+    res.status(200).json({
+      status: 1,
+      message: "Login successful",
+      token,
+      user: {
+        id: user._id,
+        phone: user.phone,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        profilePicture: user.profilePicture,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ message: "Server error", error: err.message });
   }
 };
