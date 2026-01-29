@@ -13,24 +13,31 @@ exports.protect = async (req, res, next) => {
     }
 
     if (!token) {
-      return res.status(401).json({ message: "Not authorized, token missing" });
+      return res.status(401).json({ message: "Token missing" });
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    req.user = await User.findById(decoded.id).select("-otp");
+    const user = await User.findById(decoded.id).select("-otp");
+
+    if (!user) {
+      return res.status(401).json({ message: "User not found" });
+    }
+
+    req.user = user;
 
     next();
   } catch (err) {
-    res.status(401).json({ message: "Not authorized, token invalid" });
+    res.status(401).json({ message: "Invalid token" });
   }
 };
 
 exports.adminOnly = (req, res, next) => {
   if (req.user.role !== "admin") {
     return res.status(403).json({
-      message: "Access denied. Admin only",
+      message: "Access denied: Admin only",
     });
   }
+
   next();
 };

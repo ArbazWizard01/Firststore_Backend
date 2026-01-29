@@ -9,9 +9,9 @@ const {
   addProduct,
 } = require("../controllers/adminController");
 
-router.post("/banner", protect, adminOnly, addBanner);
-router.post("/category", protect, adminOnly, addCategory);
-router.post("/store", protect, adminOnly, addStore);
-router.post("/product", protect, adminOnly, addProduct);
+router.post("/add-banner", protect, adminOnly, addBanner);
+router.post("/add-category", protect, adminOnly, addCategory);
+router.post("/add-store", protect, adminOnly, addStore);
+router.post("/add-product", protect, adminOnly, addProduct);
 
 module.exports = router;
